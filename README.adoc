@@ -1,0 +1,3 @@
+# Coton : prototyping framework for component-based software development
+
+Go and read doc/interfaces.adoc

@@ -1,0 +1,107 @@
+# Interfaces utilisateurs de Coton
+
+## Description rapide
+
+Coton est un atelier de développement logiciel en composant facilitant le
+prototypage en Python.
+
+## Exemple
+
+.Exemple
+[source,python]
+------------------------------------------------------------------------------
+class Antenne(metaclass=MétaActeur): <1>
+    """Simulateur d'une antenne
+    """
+
+    commande = recv_msg("Position à viser, ou None") <2>
+
+    position = send_msg("Position atteinte", Vec3(0, 0, 0)) <3>
+
+    tic = recv_msg("Heure système", 0)
+
+    @entry(tic) <4>
+    def activer(self):
+        if self.commande is not None:
+            p = (self.commande + self.position) / 2
+        else:
+            p = Vec3.random()
+        self.position = p <5>
+------------------------------------------------------------------------------
+
+<1> Enregistrement d'un *acteur* dans le système
+<2> Donnée consommée sans valeur par défaut spécifiée (donc `None`)
+<3> Donnée produite avec valeur par défaut
+<4> Spécification du lien entre donnée consommée et point d'activation
+<5> Production de donnée
+
+## Premières remarques
+
+- Un acteur peut évidemment présenter autant d'interfaces de données que
+nécessaire ;
+- La liaison entre donnée(s) et point(s) d'entrée est libre. Dans l'exemple
+précédent, `commande` n'est lié à aucun point d'entrée ;
+- L'écriture d'une interface de donnée ne provoque pas immédiatement la
+communication de sa valeur aux autres acteurs, sauf usage du paramètre
+`send_msg.immediate`
+
+.Comportement en cas d'émission immédiate
+[source,python]
+------------------------------------------------------------------------------
+…
+position = send_msg("Position atteinte", Vec3(0, 0, 0), immediate=True) <1>
+
+@entry(tic)
+def activer(self):
+    if self.commande is not None:
+        self.position.x = (self.commande.x + self.position.x) / 2 <2>
+        self.position.y = (self.commande.y + self.position.y) / 3 <3>
+        self.position.z = self.commande.z <4>
+    else:
+        self.position = Vec3.random()
+------------------------------------------------------------------------------
+
+<1> L'interface de donnée `position` est spécifiquement configurée en mode
+immédiat.
+<2> Émission de `position` à `Vec3(x', y, z)`
+<3> Émission de `position` à `Vec3(x', y', z)`
+<4> Émission de `position` à `Vec3(x', y', z')`
+
+## Activation inconditionnelle
+
+Puisque tous les points d'entrée attendent au moins la publication d'une
+donnée pour être activé, quid de la première donnée ?
+
+Pour cela, un acteur peut spécifier un point d'entrée inconditionnel.
+
+.Point d'entrée inconditionnel
+[source,python]
+------------------------------------------------------------------------------
+class Horloge(metaclass=MétaActeur):
+    """Production de l'heure système
+    """
+
+    tic = send_msg("Nombre de tics d'horloge", 0)
+
+    @entry <1>
+    def activer(self):
+        time.sleep(1.0)
+        tic += 1 <2>
+------------------------------------------------------------------------------
+
+<1> Spécification d'un point d'entrée inconditionnel
+<2> Production d'une donnée en interface
+
+[WARNING] Un acteur est soit un _générateur_ (un *unique* point d'entrée,
+*inconditionnel*), soit tous ses points d'entrée sont liés à une ou plusieurs
+données.
+
+### Fonctionnement des points d'entrée inconditionnels
+
+Appel systématique au sein d'une boucle infinie.
+
+À la sortie d'une itération, les données produites sont communiquées.
+
+Le prochain appel du point d'entrée est enregistré dans la file de messages.
+Ainsi, un générateur peut également spécifier des interfaces de données
+entrantes.
