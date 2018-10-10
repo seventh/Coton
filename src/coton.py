@@ -122,7 +122,8 @@ class recv_msg:
             action(obj)
             # Production des sorties associées
             for donnée in sortie:
-                GM.transmettre(donnée.name, donnée.value)
+                if not donnée.immediate:
+                    GM.transmettre(donnée.name, donnée.value)
             sortie.clear()
 
 
@@ -182,7 +183,8 @@ class send_msg:
             action(obj)
             # Production des sorties associées
             for donnée in sortie:
-                GM.transmettre(donnée.name, donnée.value)
+                if not donnée.immediate:
+                    GM.transmettre(donnée.name, donnée.value)
             sortie.clear()
 
 
@@ -273,14 +275,14 @@ class MétaActeur(type):
                     if a_entry:
                         print(
                             "ERREUR : l'Acteur {!r} a plus d'un point d'entrée"
-                            "inconditionnel".format(nom))
+                            " inconditionnel".format(nom))
                     else:
                         est_générateur = True
                         GM._entrées[nom] = v.méthode
                 elif est_générateur:
                     print("ERREUR : l'Acteur {!r} ne peut à la fois avoir des"
-                          "points d'entrée conditionnels et"
-                          "inconditionnels".format(nom))
+                          " points d'entrée conditionnels et"
+                          " inconditionnels".format(nom))
 
                 # On shunte le décorateur
                 attribs[k] = v.méthode
@@ -410,7 +412,7 @@ def tâche_autonome(nom_instance, queue, entrée):
             # Stockage de la donnée
             valeur = pickle.loads(valeur_codée)
             setattr(instance, nom, valeur)
-            attr = type(instance)[nom]
+            attr = type(instance).__dict__[nom]
             attr.update(instance, valeur)
 
 
