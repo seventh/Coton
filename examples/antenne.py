@@ -151,7 +151,7 @@ class Horloge(metaclass=MétaActeur):
     """
 
     tic = send_msg("Heure du système, en nombre d'activations", 0,
-                   instantané=True)
+                   immediate=True)
 
     PÉRIODE = 1.0  # en secondes
 

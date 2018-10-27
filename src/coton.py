@@ -89,32 +89,50 @@ GM = GrandMamamouchi()
 
 
 class recv_msg:
-    """Valeur mise-à-jour par le cadriciel
+    """Attribute whose value is updated by framework only
     """
 
-    def __init__(self, commentaire="", init=None, nom_global=None):
-        self.__doc__ = commentaire
-        self._nom = "ça_marche_pas 1"
-        self._nom_global = nom_global
-        self._défaut = init
+    def __init__(self, doc="", default=None, *,
+                 system_name=None):
+        self.__doc__ = doc
+        self._name = "ça_marche_pas 1"
+        self._system_name = system_name
+        self._default = default
         self._actions = list()
 
     def __get__(self, obj, objtype):
-        return getattr(obj, self._nom)
+        """Preferred way to read attribute (for framework user)
+        """
+        return getattr(obj, self._name)
 
     def __set__(self, obj, value):
-        return setattr(obj, self._nom, value)
+        """Preferred way to write attribute (for framework user)
+        """
+        return setattr(obj, self._name, value)
 
-    def __set_name__(self, obj, nom):
-        self._nom = "_" + nom
-        if self._nom_global is None:
-            self._nom_global = nom
+    def __set_name__(self, obj, attribute_name):
+        """Allows association of attribute name with descriptor
+        """
+        self._name = "_" + attribute_name
+        if self._system_name is None:
+            self._system_name = attribute_name
 
-    def enregistrer_activation(self, méthode):
-        self._actions.append(méthode)
+    @property
+    def system_name(self):
+        """Identifier, within the whole system, of the exchanged data
+        """
+        return self._system_name
+
+    def add_callback(self, callback):
+        """Register callback method in order to execute it at attribute update
+        """
+        self._actions.append(callback)
 
     def update(self, obj, value):
-        """Mise-à-jour provoquée par le Grand Mamamouchi
+        """Preferred way to write attribute value (for framework)
+
+        Callbacks associated with the attribute are also executed, and their
+        outputs transmitted
         """
         # Appel des points d'entrée
         sortie = GM._sorties[type(obj).__name__]
@@ -128,54 +146,59 @@ class recv_msg:
 
 
 class send_msg:
-    """Valeur mise-à-jour par l'Acteur lui-même, ou le cadriciel
-
-    Tout 'send_msg' est donc potentiellement émis par plus d'un Acteur
+    """Attribute whose value can be updated either by user or framework
     """
 
-    def __init__(self, commentaire="", init=None, *,
-                 nom_global=None, instantané=False):
+    def __init__(self, doc="", default=None, *,
+                 system_name=None, immediate=False):
         """
-        instantané → chaque mise-à-jour provoque l'émission immédiate de la
+        immediate → chaque mise-à-jour provoque l'émission immédiate de la
                      donnée
         """
-        self.__doc__ = commentaire
-        self._nom = "ça_marche_pas 2"
-        self._nom_global = nom_global
-        self._défaut = init
-        self._instantané = instantané
+        self.__doc__ = doc
+        self._name = "ça_marche_pas 2"
+        self._system_name = system_name
+        self._default = default
+        self._immediate = immediate
 
     def __get__(self, obj, objtype):
+        """Preferred way to read attribute (for framework user)
+        """
         if obj is None:
             return self
         else:
-            return getattr(obj, self._nom)
+            return getattr(obj, self._name)
 
     def __set__(self, obj, value):
-        retour = setattr(obj, self._nom, value)
-        GM.publier(type(obj).__name__, self._nom_global,
-                   value, self._instantané)
+        retour = setattr(obj, self._name, value)
+        GM.publier(type(obj).__name__, self._system_name,
+                   value, self._immediate)
         return retour
 
-    def __set_name__(self, obj, nom):
-        self._nom = "_" + nom
-        if self._nom_global is None:
-            self._nom_global = nom
+    def __set_name__(self, obj, attribute_name):
+        """Allows association of attribute name with descriptor
+        """
+        self._name = "_" + attribute_name
+        if self._system_name is None:
+            self._system_name = attribute_name
 
     @property
-    def nom_global(self):
-        """Nom système de l'échange
+    def system_name(self):
+        """Identifier, within the whole system, of the exchanged data
         """
-        return self._nom_global
+        return self._system_name
 
     @property
-    def est_immédiat(self):
-        """Vrai ssi la mise-à-jour provoque immédiatement la communication
+    def is_immediate(self):
+        """If true, update of the attribute value is immediately communicated
         """
-        return self._instantané
+        return self._immediate
 
     def update(self, obj, value):
-        """Mise-à-jour provoquée par le Grand Mamamouchi
+        """Preferred way to write attribute value (for framework)
+
+        Callbacks associated with the attribute are also executed, and their
+        outputs transmitted
         """
         # Appel des points d'entrée
         sortie = GM._sorties[type(obj).__name__]
@@ -290,7 +313,7 @@ class MétaActeur(type):
                 # On câble l'activation de la méthode dans les descripteurs
                 for msg in attribs.values():
                     if msg in v.données:
-                        msg.enregistrer_activation(v.méthode)
+                        msg.add_callback(v.méthode)
 
                 a_entry = True
         if not a_entry:
@@ -302,7 +325,7 @@ class MétaActeur(type):
         for k, v in attribs.items():
             if isinstance(v, (recv_msg, send_msg)):
                 nom_attribut = "_" + k
-                champs[nom_attribut] = v._défaut
+                champs[nom_attribut] = v._default
 
         # L'initialisation des attributs d'instance est faite en même temps
         # que l'instance, avec les valeurs par défaut prévues, via une
@@ -369,7 +392,7 @@ def tâche(nom_instance, queue):
         # Conversion du nom système en nom local
         for nom_attr, attr in type(instance).__dict__.items():
             if (isinstance(attr, (recv_msg, send_msg)) and
-                    attr._nom_global == nom_système):
+                    attr._system_name == nom_système):
                 nom = nom_attr
                 break
         else:
@@ -424,9 +447,9 @@ def publier(obj, attr):
     """Si l'utilisateur souhaite déclarer lui-même la publication
     """
     GM.publier(obj.__class__.__name__,
-               attr._nom_global,
-               getattr(obj, attr._nom_global),
-               attr._instantané)
+               attr._system_name,
+               getattr(obj, attr._system_name),
+               attr._immediate)
 
 
 def sortie(obj):
