@@ -35,6 +35,67 @@ class Antenne(metaclass=MétaActeur): <1>
 <4> Spécification du lien entre donnée consommée et point d'activation
 <5> Production de donnée
 
+## Erreur fréquente
+
+De par la technologie utilisée, Coton s'appuie sur l'utilisation de
+l'opérateur "=" directement sur les données échangées pour détecter les
+écritures de message. Dis autrement, modifier un attribut de la donnée ne
+provoque pas son émission !
+
+Ainsi, si le code suivant est plus naturel, il est inopérant :
+
+.Code non fonctionnel
+[source,python]
+------------------------------------------------------------------------------
+class Antenne(metaclass=MétaActeur): <1>
+    """Simulateur d'une antenne
+    """
+
+    position = send_msg("Position atteinte", Vec3(0, 0, 0))
+
+    tic = recv_msg("Heure système", 0)
+
+    @entry(tic)
+    def activer(self):
+        self.position.x = 1 + self.position.x <1>
+------------------------------------------------------------------------------
+
+<1> Modification d'un champ de la donnée plutôt que de la donnée elle-même.
+
+La mise-à-jour d'un sous-champ du message ne provoque pas l'émission du
+message. La valeur locale est bien modifiée, mais elle n'est pas communiquée.
+
+À la place, il **faut** écrire :
+
+.Code corrigé
+[source,python]
+------------------------------------------------------------------------------
+class Antenne(metaclass=MétaActeur): <1>
+    """Simulateur d'une antenne
+    """
+
+    position = send_msg("Position atteinte", Vec3(0, 0, 0))
+
+    tic = recv_msg("Heure système", 0)
+
+    @entry(tic)
+    def activer(self):
+        p = self.position <1>
+        p.x = 1 + p.x
+        self.position = p <2>
+------------------------------------------------------------------------------
+
+<1> Récupération de la dernière valeur ayant circulé.
+<2> Émission d'une nouvelle valeur, identifiable par l'utilisation de
+l'opérateur `=`.
+
+Il est à noter qu'ainsi, on ne provoque pas de recopie : on récupère
+l'attribut, on le modifie, et on notifie son émission.
+
+Sans la dernière ligne (l'affectation), on retombe sur le même fonctionnement
+que précédemment : la valeur locale est modifiée, mais elle n'est pas
+communiquée.
+
 ## Premières remarques
 
 - Un acteur peut évidemment présenter autant d'interfaces de données que
