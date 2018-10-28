@@ -28,7 +28,7 @@ class TestAntenne(unittest.TestCase):
         o = Vec3(10.0, -200.0, 3000.0)
         a.objectif = o
         while a.position != o:
-            a.met_activer()
+            a.activer()
             print(a.position)
 
     def test_dériver(self):
@@ -36,7 +36,7 @@ class TestAntenne(unittest.TestCase):
 
         self.assertEqual(a.position, Vec3(1, 2, 3))
 
-        a.met_activer()
+        a.activer()
         self.assertNotEqual(a.position, Vec3(1, 2, 3))
         print(a.position)
 
@@ -44,15 +44,15 @@ class TestAntenne(unittest.TestCase):
         a = Antenne()
 
         for i in range(10):
-            a.met_activer()
+            a.activer()
 
         a.objectif = Vec3(-4, 8, -9)
         while a.objectif != a.position:
-            a.met_activer()
+            a.activer()
 
         a.objectif = None
         for i in range(10):
-            a.met_activer()
+            a.activer()
         self.assertNotEqual(a.position, Vec3(1, 2, 3))
         print(a)
 

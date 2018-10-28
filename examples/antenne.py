@@ -61,7 +61,7 @@ class Antenne(metaclass=MétaActeur):
         return retour
 
     @entry(tic)
-    def met_activer(self):
+    def activer(self):
         """Activation périodique
         """
         if self.état is StatutAlignement.ACTIF:

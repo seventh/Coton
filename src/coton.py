@@ -45,15 +45,20 @@ class GrandMamamouchi:
 
     def publier(self, nom, nom_échange, valeur, instantané):
         h = time.time()
-        print("{} : Publication de {}".format(h, nom_échange))
+        print("{}: {} → {}".format(h, nom, nom_échange))
         self._sorties[nom].push(nom_échange, valeur, instantané)
         if instantané:
-            self.transmettre(nom_échange, valeur)
+            self.transmettre(nom, nom_échange, valeur)
 
-    def transmettre(self, nom_échange, valeur):
+    def transmettre(self, nom, nom_échange, valeur):
         échange = self._échanges[nom_échange]
         valeur_codée = pickle.dumps(valeur)
         for c in échange.consommateurs:
+            print("{}: {} → {}".format(nom_échange, nom, c))
+            q = self._files[c]
+            q.put((nom_échange, valeur_codée))
+        for c in [n for n in échange.producteurs if n != nom]:
+            print("{}: {} → {}".format(nom_échange, nom, c))
             q = self._files[c]
             q.put((nom_échange, valeur_codée))
 
@@ -134,14 +139,18 @@ class recv_msg:
         Callbacks associated with the attribute are also executed, and their
         outputs transmitted
         """
+        # Mise-à-jour de la valeur
+        setattr(obj, self._name, value)
+
         # Appel des points d'entrée
-        sortie = GM._sorties[type(obj).__name__]
+        nom = type(obj).__name__
+        sortie = GM._sorties[nom]
         for action in self._actions:
             action(obj)
             # Production des sorties associées
             for donnée in sortie:
                 if not donnée.immediate:
-                    GM.transmettre(donnée.name, donnée.value)
+                    GM.transmettre(nom, donnée.name, donnée.value)
             sortie.clear()
 
 
@@ -159,6 +168,7 @@ class send_msg:
         self._name = "ça_marche_pas 2"
         self._system_name = system_name
         self._default = default
+        self._actions = list()
         self._immediate = immediate
 
     def __get__(self, obj, objtype):
@@ -194,20 +204,29 @@ class send_msg:
         """
         return self._immediate
 
+    def add_callback(self, callback):
+        """Register callback method in order to execute it at attribute update
+        """
+        self._actions.append(callback)
+
     def update(self, obj, value):
         """Preferred way to write attribute value (for framework)
 
         Callbacks associated with the attribute are also executed, and their
         outputs transmitted
         """
+        # Mise-à-jour de la valeur
+        setattr(obj, self._name, value)
+
         # Appel des points d'entrée
-        sortie = GM._sorties[type(obj).__name__]
+        nom = type(obj).__name__
+        sortie = GM._sorties[nom]
         for action in self._actions:
             action(obj)
             # Production des sorties associées
             for donnée in sortie:
                 if not donnée.immediate:
-                    GM.transmettre(donnée.name, donnée.value)
+                    GM.transmettre(nom, donnée.name, donnée.value)
             sortie.clear()
 
 
@@ -241,7 +260,7 @@ class entry:
     def __init__(self, *données):
         # On doit pouvoir faire mieux. Peut-être même faudrait-il distinguer
         # les points d'entrée inconditionnels avec un marqueur spécifique ?
-        if len(données) == 1 and not isinstance(données[0], recv_msg):
+        if len(données) == 1 and not isinstance(données[0], (recv_msg, send_msg)):
             self.méthode = données[0]
             self.données = list()
         else:
@@ -402,7 +421,6 @@ def tâche(nom_instance, queue):
 
         # Stockage de la donnée, et appel des points d'activations liés
         valeur = pickle.loads(valeur_codée)
-        setattr(instance, nom, valeur)
         attr.update(instance, valeur)
 
 
@@ -426,7 +444,7 @@ def tâche_autonome(nom_instance, queue, entrée):
             # Production des sorties associées
             for donnée in sortie:
                 if not donnée.immediate:
-                    GM.transmettre(donnée.name, donnée.value)
+                    GM.transmettre(nom_instance, donnée.name, donnée.value)
             sortie.clear()
 
             # Empilement dès la sortie de la prochaine auto-activation
@@ -434,7 +452,6 @@ def tâche_autonome(nom_instance, queue, entrée):
         else:
             # Stockage de la donnée
             valeur = pickle.loads(valeur_codée)
-            setattr(instance, nom, valeur)
             attr = type(instance).__dict__[nom]
             attr.update(instance, valeur)
 
