@@ -54,18 +54,23 @@ position = send_msg("Position atteinte", Vec3(0, 0, 0), immediate=True) <1>
 @entry(tic)
 def activer(self):
     if self.commande is not None:
-        self.position.x = (self.commande.x + self.position.x) / 2 <2>
-        self.position.y = (self.commande.y + self.position.y) / 3 <3>
-        self.position.z = self.commande.z <4>
+        position = self.position <2>
+        position.x = (self.commande.x + position.x) / 2
+        self.position = position <3>
+        position.y = (self.commande.y + position.y) / 5
+        self.position = position <4>
     else:
         self.position = Vec3.random()
 ------------------------------------------------------------------------------
 
 <1> L'interface de donnée `position` est spécifiquement configurée en mode
 immédiat.
-<2> Émission de `position` à `Vec3(x', y, z)`
-<3> Émission de `position` à `Vec3(x', y', z)`
-<4> Émission de `position` à `Vec3(x', y', z')`
+<2> Lecture de la dernière valeur de `position`
+<3> Première émission de `position`
+<4> Seconde émission de `position`
+
+Si `position` n'avait pas été marqué comme `immediate`, il n'aurait été émis
+qu'une seule fois, à la fin du point d'entrée.
 
 ## Activation inconditionnelle
 
@@ -86,7 +91,7 @@ class Horloge(metaclass=MétaActeur):
     @entry <1>
     def activer(self):
         time.sleep(1.0)
-        tic += 1 <2>
+        self.tic += 1 <2>
 ------------------------------------------------------------------------------
 
 <1> Spécification d'un point d'entrée inconditionnel
