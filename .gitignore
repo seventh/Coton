@@ -1,3 +1,10 @@
+# Emacs artefacts
 *~
+
+# CPython artefacts
 *.o
 *.pyc
+
+# 'setuptools' artefacts
+*.egg-info
+dist
