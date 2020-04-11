@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-
 """Démonstration de la recopie des données entre tâches
 
 Si la donnée `liste` était partagée entre les deux acteurs, la sortie serait :
@@ -20,7 +19,7 @@ class Producteur(metaclass=coton.MétaActeur):
     """Générateur
     """
 
-    liste = coton.send_msg("Test trop fort", list(), instantané=True)
+    liste = coton.send_msg("Test trop fort", list(), immediate=True)
 
     @coton.entry
     def tiens(self):
@@ -28,7 +27,7 @@ class Producteur(metaclass=coton.MétaActeur):
         # Autre version :
         # self.liste += [1, 2]
         self.liste.extend([1, 2])
-        coton.publier(Producteur.liste)
+        coton.publier(self, Producteur.liste)
 
         time.sleep(1)
 

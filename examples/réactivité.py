@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-
 """Démonstration de réception sur une interface d'émission
 """
 

@@ -10,7 +10,6 @@ from geo import Vec3
 
 
 class TestAntenne(unittest.TestCase):
-
     def test_converger(self):
         a = Antenne()
 
@@ -18,8 +17,9 @@ class TestAntenne(unittest.TestCase):
         while x != 0:
             y = a._converger(x)
             print(x, y)
-            self.assertGreater(abs(x), abs(
-                y), "Pas de convergence vers 0: {} → {}".format(x, y))
+            self.assertGreater(
+                abs(x), abs(y),
+                "Pas de convergence vers 0: {} → {}".format(x, y))
             x = y
 
     def test_aligner(self):
@@ -58,7 +58,6 @@ class TestAntenne(unittest.TestCase):
 
 
 class TestHorloge(unittest.TestCase):
-
     def test_générer(self):
         H = Horloge()
         t0 = time.time()

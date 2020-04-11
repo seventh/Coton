@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-
 """Prototypage des API
 """
 
@@ -21,7 +20,6 @@ class StatutAlignement(enum.Enum):
 
 
 class État:
-
     def __init__(self):
         self.position = Vec3(0, 0, 0)
         self.est_aligné = False
@@ -138,10 +136,10 @@ class Gestionnaire(metaclass=MétaActeur):
                 self._compteur = 0
             else:
                 self._compteur += 1
-                if ((self.état.est_aligné and
-                     self._compteur > Gestionnaire._CONSERVATION) or
-                    (not self.état.est_aligné and
-                     self._compteur > Gestionnaire._PREMIER_ALIGNEMENT)):
+                if ((self.état.est_aligné
+                     and self._compteur > Gestionnaire._CONSERVATION) or
+                    (not self.état.est_aligné
+                     and self._compteur > Gestionnaire._PREMIER_ALIGNEMENT)):
                     self._état.est_aligné = False
                     self._objectif = None
 
@@ -150,7 +148,8 @@ class Horloge(metaclass=MétaActeur):
     """Produit un événement périodique d'activation
     """
 
-    tic = send_msg("Heure du système, en nombre d'activations", 0,
+    tic = send_msg("Heure du système, en nombre d'activations",
+                   0,
                    immediate=True)
 
     PÉRIODE = 1.0  # en secondes
